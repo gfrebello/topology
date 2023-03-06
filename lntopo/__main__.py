@@ -1,6 +1,7 @@
 import json
 import click
 from lntopo.timemachine import timemachine
+from lntopo.utils import utils
 from lntopo.common import GossipStore
 from lntopo import common
 from binascii import unhexlify
@@ -13,6 +14,7 @@ def cli():
 
 
 cli.add_command(timemachine)
+cli.add_command(utils)
 
 @cli.group()
 def nodes():

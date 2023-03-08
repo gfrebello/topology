@@ -28,31 +28,35 @@ def utils():
 @click.argument('input_graph', type=str, required=True)
 @click.argument('output_location', type=str, required=True)
 def build_capacities(input_graph, output_location, fmt='gml'):
-    if os.path.exists(output_location) and os.stat(output_location).st_size > 0:
-        print("WARNING: overwriting file", output_location)
-        if not confirm():
-            print("Aborting...")
-            sys.exit(0)
+    # if os.path.exists(output_location) and os.stat(output_location).st_size > 0:
+    #     print("WARNING: overwriting file", output_location)
+    #     if not confirm():
+    #         print("Aborting...")
+    #         sys.exit(0)
 
     if fmt == 'dot':
-        g = nx.drawing.nx_pydot.read_dot(input_graph)
+        G = nx.drawing.nx_pydot.read_dot(input_graph)
 
     elif fmt == 'gml':
-        g = nx.readwrite.read_gml(input_graph)
+        G = nx.readwrite.read_gml(input_graph)
 
     elif fmt == 'graphml':
-        g = nx.readwrite.read_graphml(input_graph)
+        G = nx.readwrite.read_graphml(input_graph)
 
     elif fmt == 'json':
         with(input_graph,'r') as f:
             json_graph = json.load(f)
-        g = nx.readwrite.node_link_data(json_graph)
-        
-    with open(output_location, 'w+') as f:
+        G = nx.readwrite.node_link_data(json_graph)
+
+    with open(output_location, 'r+') as f:
         queried = []
+        reader = csv.reader(f)
+        next(reader, None)
+        for row in reader:
+            queried.append(row[0])
         writer = csv.writer(f)
-        writer.writerow(['scid','capacity_sat'])
-        for u, v, attr in tqdm(g.edges(data=True), desc=' '.join(["Bulding capacities file at", output_location])):
+        # writer.writerow(['scid','capacity_sat'])
+        for u, v, attr in tqdm(G.edges(data=True), desc=' '.join(["Bulding capacities file at", output_location])):
             undirected_scid = attr['scid'][:-2]
             if undirected_scid not in queried:
                 scid_elements = [ int(i) for i in undirected_scid.split("x") ]
@@ -65,4 +69,48 @@ def build_capacities(input_graph, output_location, fmt='gml'):
                     raise Exception("ERROR: unable to retrieve channel.")
                 writer.writerow([undirected_scid, channel_info['capacity']])
                 queried.append(undirected_scid)
+
+
+@utils.command()
+@click.option('--fmt', type=click.Choice(['dot', 'gml', 'graphml', 'json'], case_sensitive=False))
+@click.argument('input_graph', type=str, required=True)
+@click.argument('output_location', type=str, required=True)
+@click.argument('capacities_file', type=str, required=True)
+def add_capacities(input_graph, output_location, capacities_file='./data/capacities.csv', fmt='gml'):
+    with open(capacities_file, 'r') as f:
+        reader = csv.reader(f)
+        capacities = { row[0]:row[1] for row in reader }
+    
+    if fmt == 'dot':
+        G = nx.drawing.nx_pydot.read_dot(input_graph)
+
+    elif fmt == 'gml':
+        G = nx.readwrite.read_gml(input_graph)
+
+    elif fmt == 'graphml':
+        G = nx.readwrite.read_graphml(input_graph)
+
+    elif fmt == 'json':
+        with(input_graph,'r') as f:
+            json_graph = json.load(f)
+        G = nx.readwrite.node_link_data(json_graph)
+
+    for u, v, attr in tqdm(G.edges(data=True), desc=' '.join(["Adding capacity information to", input_graph])):
+        undirected_scid = attr['scid'][:-2]
+        attr['undirected_capacity'] = int(capacities[undirected_scid])
+    
+    with open(output_location, 'w') as f:        
+        if fmt == 'dot':
+            print(nx.nx_pydot.to_pydot(G), file=f)
+
+        elif fmt == 'gml':
+            for line in nx.generate_gml(G):
+                print(line, file=f)
+
+        elif fmt == 'graphml':
+            for line in nx.generate_graphml(G, named_key_ids=True, edge_id_from_attribute='scid'):
+                print(line, file=f)
+
+        elif fmt == 'json':
+            print(json.dumps(json_graph.adjacency_data(G)), file=f)
 

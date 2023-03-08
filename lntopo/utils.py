@@ -97,7 +97,7 @@ def add_capacities(input_graph, output_location, capacities_file='./data/capacit
 
     for u, v, attr in tqdm(G.edges(data=True), desc=' '.join(["Adding capacity information to", input_graph])):
         undirected_scid = attr['scid'][:-2]
-        attr['undirected_capacity'] = int(capacities[undirected_scid])
+        attr['capacity'] = int(capacities[undirected_scid])
     
     with open(output_location, 'w') as f:        
         if fmt == 'dot':

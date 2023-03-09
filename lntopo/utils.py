@@ -1,12 +1,10 @@
 import requests
 import os
-import sys
 import csv
 import json
 import click
 import networkx as nx
-from tqdm import tqdm 
-import random 
+from tqdm import tqdm
 
 def confirm():
     """
@@ -55,7 +53,6 @@ def build_capacities(input_graph, output_location, fmt='gml'):
         for row in reader:
             queried.append(row[0])
         writer = csv.writer(f)
-        # writer.writerow(['scid','capacity_sat'])
         for u, v, attr in tqdm(G.edges(data=True), desc=' '.join(["Bulding capacities file at", output_location])):
             undirected_scid = attr['scid'][:-2]
             if undirected_scid not in queried:
